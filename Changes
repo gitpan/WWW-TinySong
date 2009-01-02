@@ -1,0 +1,6 @@
+Revision history for Perl extension WWW::TinySong.
+
+0.01  Fri Jan  2 13:10:46 2009
+	- original version; created by h2xs 1.23 with options
+		-AXn WWW::TinySong
+

@@ -1,0 +1,9 @@
+Changes
+Makefile.PL
+MANIFEST
+README
+t/WWW-TinySong.t
+t/pod.t
+t/pod-coverage.t
+lib/WWW/TinySong.pm
+META.yml                                 Module meta-data (added by MakeMaker)
