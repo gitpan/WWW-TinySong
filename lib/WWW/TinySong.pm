@@ -28,7 +28,7 @@ to programmatically search its underlying database.
 
 =cut
 
-use 5.008008;
+use 5.008;
 use strict;
 use warnings;
 
@@ -38,7 +38,7 @@ use HTML::Parser;
 use LWP::UserAgent;
 
 our @ISA     = qw(LWP::UserAgent);
-our $VERSION = '0.00_01';
+our $VERSION = '0.00_02';
 $VERSION     = eval $VERSION;
 
 =head1 CONSTRUCTOR

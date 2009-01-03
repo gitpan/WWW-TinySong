@@ -1,14 +1,14 @@
 # http://module-build.sourceforge.net/META-spec.html
 #XXXXXXX This is a prototype!!!  It will change in the future!!! XXXXX#
 name:         WWW-TinySong
-version:      0.00_01
+version:      0.00_02
 version_from: lib/WWW/TinySong.pm
 installdirs:  site
 requires:
-    Carp:                          1.04
-    CGI:                           3.15
-    HTML::Parser:                  3.59
-    LWP::UserAgent:                5.822
+    Carp:                          0
+    CGI:                           0
+    HTML::Parser:                  3
+    LWP::UserAgent:                0
 
 distribution_type: module
 generated_by: ExtUtils::MakeMaker version 6.30

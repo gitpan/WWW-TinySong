@@ -1,4 +1,4 @@
-WWW::TinySong version 0.00_01
+WWW::TinySong version 0.00_02
 =============================
 
 TinySong is a web app that can be queried for a song and returns a tiny
@@ -19,13 +19,10 @@ DEPENDENCIES
 
 This module requires the following other modules:
 
-  Carp 1.04
-  CGI 3.15
-  HTML::Parser 3.59
-  LWP::UserAgent 5.822
-
-The specified versions are the ones on my system at the time of development.
-The module might work with different versions.
+  Carp
+  CGI
+  HTML::Parser
+  LWP::UserAgent
 
 COPYRIGHT AND LICENSE
 
@@ -34,5 +31,4 @@ Copyright (C) 2009 by Miorel-Lucian Palii
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself, either Perl version 5.8.8 or,
 at your option, any later version of Perl 5 you may have available.
-
 
