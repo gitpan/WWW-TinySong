@@ -12,7 +12,7 @@ WWW::TinySong - Get free music links using TinySong
   $ts->timeout(10);
   $ts->env_proxy;
 
-  for($ts->song_search("Never Gonna Give You Up")) {
+  for($ts->song_search("never gonna give you up")) {
       printf("%s", $_->{song});
       printf(" by %s", $_->{artist}) if $_->{artist};
       printf(" on %s", $_->{album}) if $_->{album};
@@ -38,14 +38,13 @@ use HTML::Parser;
 use LWP::UserAgent;
 
 our @ISA     = qw(LWP::UserAgent);
-our $VERSION = '0.00_02';
-$VERSION     = eval $VERSION;
+our $VERSION = '0.01';
 
-=head1 CONSTRUCTOR
+=head1 CONSTRUCTORS
 
 L<WWW::TinySong> subclasses L<LWP::UserAgent>, so you can use the same
 constructors. If you're lazy, just play with the example given in the
-L<SYNOPSIS>: that should be sufficient to get started with this module.
+L</SYNOPSIS>: that should be sufficient to get started with this module.
 
 =head1 METHODS
 
@@ -57,8 +56,39 @@ supported by L<LWP::UserAgent>.
 =item song_search ( QUERY_STRING [, LIMIT ] )
 
 Searches the TinySong database for QUERY_STRING, giving up to LIMIT
-results. LIMIT defaults to 10 if unspecified. Method returns an array or
-arrayref, depending on context.
+results. LIMIT defaults to 10 if unspecified. Returns an array in list
+context and an arrayref in scalar context. Return elements are hashrefs
+with keys C<qw(album artist song url)>. Their values will be the empty
+string if not given by the website. Here's a quick script to
+demonstrate:
+
+  #!/usr/bin/perl
+
+  use WWW::TinySong;
+  use Data::Dumper;
+   
+  print Dumper(WWW::TinySong->new->song_search("a hard day's night", 3));
+
+...and its output on my system at the time of this writing:
+
+  $VAR1 = {
+            'album' => 'Golden Beatles',
+            'artist' => 'The Beatles',
+            'song' => 'A Hard Day\'s Night',
+            'url' => 'http://tinysong.com/2Cqe'
+          };
+  $VAR2 = {
+            'album' => '',
+            'artist' => 'The Beatles',
+            'song' => 'A Hard Day\'s Night',
+            'url' => 'http://tinysong.com/2BI5'
+          };
+  $VAR3 = {
+            'album' => 'The Beatles 1',
+            'artist' => 'The Beatles',
+            'song' => 'A Hard Day\'s Night',
+            'url' => 'http://tinysong.com/2Cqi'
+          };
 
 =cut
 
@@ -127,7 +157,7 @@ sub song_search {
         $parser->parse($response->decoded_content);
         $parser->eof;
         for my $res (@ret) {
-            $res->{$_} ||= '' for qw(album artist song);
+            $res->{$_} ||= '' for qw(album artist song url);
             $res->{album}  =~ s/^\s+on\s//;
             $res->{artist} =~ s/^\s+by\s//;
         }

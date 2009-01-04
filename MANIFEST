@@ -2,8 +2,10 @@ Changes
 Makefile.PL
 MANIFEST
 README
+examples/hard_day.pl
+examples/rickroll.pl
+lib/WWW/TinySong.pm
 t/WWW-TinySong.t
 t/pod.t
 t/pod-coverage.t
-lib/WWW/TinySong.pm
 META.yml                                 Module meta-data (added by MakeMaker)
