@@ -6,13 +6,28 @@ WWW::TinySong - Get free music links using TinySong
 
 =head1 SYNOPSIS
 
+  # functional 
+
+  use WWW::TinySong qw(tinysong);
+
+  for(tinysong("never gonna give you up")) {
+      printf("%s", $_->{song});
+      printf(" by %s", $_->{artist}) if $_->{artist};
+      printf(" on %s", $_->{album}) if $_->{album};
+      printf(" <%s>\n", $_->{url});
+  }
+
+
+  # object-oriented
+
   use WWW::TinySong;
-
-  my $ts = WWW::TinySong->new;
+  
+  my $ts = new WWW::TinySong;
+  
   $ts->timeout(10);
-  $ts->env_proxy;
+  $ts->env_proxy();
 
-  for($ts->song_search("never gonna give you up")) {
+  for($ts->tinysong("never gonna give you up")) {
       printf("%s", $_->{song});
       printf(" by %s", $_->{artist}) if $_->{artist};
       printf(" on %s", $_->{album}) if $_->{album};
@@ -34,40 +49,39 @@ use warnings;
 
 use Carp;
 use CGI;
+use Exporter;
 use HTML::Parser;
 use LWP::UserAgent;
 
-our @ISA     = qw(LWP::UserAgent);
-our $VERSION = '0.01';
+our @EXPORT_OK = qw(tinysong);
+our @ISA       = qw(LWP::UserAgent Exporter);
+our $VERSION   = '0.02';
 
-=head1 CONSTRUCTORS
+my $default;
 
-L<WWW::TinySong> subclasses L<LWP::UserAgent>, so you can use the same
-constructors. If you're lazy, just play with the example given in the
-L</SYNOPSIS>: that should be sufficient to get started with this module.
+=head1 FUNCTIONAL INTERFACE
 
-=head1 METHODS
-
-L<WWW::TinySong> implements one more method in addition to the ones
-supported by L<LWP::UserAgent>.
+The functional interface should be adequate for most users. If you need
+to customize the L<LWP::UserAgent> used for the underlying retrievals,
+take a look at the object-oriented interface.
 
 =over 4
 
-=item song_search ( QUERY_STRING [, LIMIT ] )
+=item tinysong ( QUERY_STRING [, LIMIT ] )
 
 Searches the TinySong database for QUERY_STRING, giving up to LIMIT
-results. LIMIT defaults to 10 if unspecified. Returns an array in list
-context and an arrayref in scalar context. Return elements are hashrefs
+results. LIMIT defaults to 10 if not C<defined>. Returns an array in list
+context or the top result in scalar context. Return elements are hashrefs
 with keys C<qw(album artist song url)>. Their values will be the empty
 string if not given by the website. Here's a quick script to
 demonstrate:
 
   #!/usr/bin/perl
 
-  use WWW::TinySong;
+  use WWW::TinySong qw(tinysong);
   use Data::Dumper;
    
-  print Dumper(WWW::TinySong->new->song_search("a hard day's night", 3));
+  print Dumper tinysong("a hard day's night", 3);
 
 ...and its output on my system at the time of this writing:
 
@@ -90,12 +104,38 @@ demonstrate:
             'url' => 'http://tinysong.com/2Cqi'
           };
 
+=back
+
+=head1 OBJECT-ORIENTED INTERFACE
+
+=head2 CONSTRUCTORS
+
+L<WWW::TinySong> subclasses L<LWP::UserAgent>, so you can use the same
+constructors. You could even C<bless> an existing L<LWP::UserAgent> as
+L<WWW::TinySong>, not that I'm recommending you do that.
+
+=head2 METHODS
+
+L<WWW::TinySong> implements one more method in addition to the ones
+supported by L<LWP::UserAgent>.
+
+=over 4
+
+=item tinysong ( QUERY_STRING [, LIMIT ] )
+
+
+=back
+
 =cut
 
-sub song_search {
-    my($self, $string, $limit) = @_;
+sub tinysong {
+    my($self, $string, $limit) = _self_or_default(@_);
     $limit = 10 unless defined $limit;
-    my $query = sprintf("http://tinysong.com?s=%s&limit=%d",
+    
+    $limit = 1 unless wantarray; # no point in searching for more if only
+                                 # one is needed
+    
+    my $query = sprintf('http://tinysong.com?s=%s&limit=%d',
         CGI::escape(lc($string)), $limit);
     my $response = $self->get($query);
     unless($response->is_success) {
@@ -107,7 +147,7 @@ sub song_search {
         my $current_class = undef;
         my $start_h       = sub {
             my($tagname, $attr) = @_;
-            if(   lc($tagname) eq 'ul'
+            if(   lc($tagname) eq 'ul' 
                && defined($attr->{id})
                && lc($attr->{id}) eq 'results')
             {
@@ -121,9 +161,8 @@ sub song_search {
                        && $class =~ /^(?:song|artist|album)$/i)
                     {
                         $current_class = $class;
-                        if(!@ret || defined($ret[$#ret]->{$current_class})) {
-                            croak "Unexpected results while parsing HTML";
-                        }
+                        croak 'Unexpected results while parsing HTML'
+                            if !@ret || defined($ret[$#ret]->{$current_class});
                     }
                 }
                 elsif(lc($tagname) eq 'a') {
@@ -149,25 +188,47 @@ sub song_search {
         };
         my $parser = HTML::Parser->new(
             api_version     => 3,
-            start_h         => [ $start_h, "tagname, attr" ],
-            text_h          => [ $text_h, "text" ],
-            end_h           => [ $end_h, "tagname" ],
+            start_h         => [$start_h, 'tagname, attr'],
+            text_h          => [$text_h, 'text'],
+            end_h           => [$end_h, 'tagname'],
             marked_sections => 1,
         );
         $parser->parse($response->decoded_content);
         $parser->eof;
         for my $res (@ret) {
-            $res->{$_} ||= '' for qw(album artist song url);
+            $res->{$_} ||= '' for qw(album artist song);
             $res->{album}  =~ s/^\s+on\s//;
             $res->{artist} =~ s/^\s+by\s//;
         }
-        return wantarray ? @ret : \@ret;
+        return wantarray ? @ret : $ret[0];
     }
 }
 
-=back
+################################################################################
 
-=cut
+sub _default {
+    $default ||= __PACKAGE__->new;
+    return $default;
+}
+
+sub _self_or_default {
+    if(defined($_[0])) {
+        if(ref($_[0])) {
+            # first arg defined and ref, put in default unless proper class
+            unshift @_, _default() unless UNIVERSAL::isa($_[0], __PACKAGE__);
+        }
+        else {
+            # first arg defined but not ref, replace if class or put in default
+            shift if UNIVERSAL::isa($_[0], __PACKAGE__);
+            unshift @_, _default();
+        }
+    }
+    else {
+        # first arg not defined, put in default
+        unshift @_, _default();
+    }
+    return @_;
+}
 
 1;
 

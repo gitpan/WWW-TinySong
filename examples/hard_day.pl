@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 
-use WWW::TinySong;
+use WWW::TinySong qw(tinysong);
 use Data::Dumper;
-  
-print Dumper(WWW::TinySong->new->song_search("a hard day's night", 3));
+
+print Dumper tinysong("a hard day's night", 3);

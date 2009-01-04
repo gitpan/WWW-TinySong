@@ -1,18 +1,20 @@
-Revision history for Perl extension WWW::TinySong.
+Revision history for WWW::TinySong
+==================================
 
 January 4, 2009
-===============
-* network-related tests now conditional
-* executed "make dist" after ExtUtils::MakeMaker upgrade
-* improved documentation with examples
-* releasing as version 0.01
+---------------
+ * network-related tests now conditional
+ * executed "make dist" after ExtUtils::MakeMaker upgrade
+ * improved documentation with examples
+ * added (simpler) functional interface in addition to the existing
+   object-oriented one
+ * releasing as version 0.02
 
 January 3, 2009
-===============
-* relaxed dependencies
-* some cosmetic changes
+---------------
+ * relaxed dependencies
+ * some cosmetic changes
 
 January 2, 2009
-===============
-* original version created by h2xs 1.23
-
+---------------
+ * original version created by h2xs 1.23

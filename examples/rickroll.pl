@@ -1,12 +1,8 @@
 #!/usr/bin/perl
 
-use WWW::TinySong;
+use WWW::TinySong qw(tinysong);
 
-my $ts = WWW::TinySong->new;
-$ts->timeout(10);
-$ts->env_proxy;
-
-for($ts->song_search("Never Gonna Give You Up")) {
+for(tinysong("never gonna give you up")) {
     printf("%s", $_->{song});
     printf(" by %s", $_->{artist}) if $_->{artist};
     printf(" on %s", $_->{album}) if $_->{album};

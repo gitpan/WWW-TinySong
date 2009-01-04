@@ -8,6 +8,7 @@ WriteMakefile(
     PREREQ_PM         => {
                             Carp           => 0,
                             CGI            => 0,
+                            Exporter       => 0,
                             HTML::Parser   => 3,
                             LWP::UserAgent => 0,
                          },

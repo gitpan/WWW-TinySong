@@ -1,6 +1,6 @@
 --- #YAML:1.0
 name:               WWW-TinySong
-version:            0.01
+version:            0.02
 abstract:           Get free music links using TinySong
 author:
     - Miorel-Lucian Palii <mlpalii@gmail.com>
@@ -11,6 +11,7 @@ configure_requires:
 requires:
     Carp:            0
     CGI:             0
+    Exporter:        0
     HTML::Parser:    3
     LWP::UserAgent:  0
 no_index:
