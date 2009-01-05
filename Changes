@@ -8,7 +8,9 @@ January 4, 2009
  * improved documentation with examples
  * added (simpler) functional interface in addition to the existing
    object-oriented one
- * releasing as version 0.02
+ * released version 0.02
+ * minor code tweaks and documentation improvements
+ * released version 0.03
 
 January 3, 2009
 ---------------

@@ -55,7 +55,7 @@ use LWP::UserAgent;
 
 our @EXPORT_OK = qw(tinysong);
 our @ISA       = qw(LWP::UserAgent Exporter);
-our $VERSION   = '0.02';
+our $VERSION   = '0.03';
 
 my $default;
 
@@ -123,6 +123,7 @@ supported by L<LWP::UserAgent>.
 
 =item tinysong ( QUERY_STRING [, LIMIT ] )
 
+Does exactly the same thing as the functional version (see above).
 
 =back
 
@@ -130,90 +131,92 @@ supported by L<LWP::UserAgent>.
 
 sub tinysong {
     my($self, $string, $limit) = _self_or_default(@_);
-    $limit = 10 unless defined $limit;
-    
-    $limit = 1 unless wantarray; # no point in searching for more if only
-                                 # one is needed
+    if(wantarray) {
+        $limit = 10 unless defined $limit;
+    }
+    else {
+        $limit = 1; # no point in searching for more if only one is needed
+    }
     
     my $query = sprintf('http://tinysong.com?s=%s&limit=%d',
         CGI::escape(lc($string)), $limit);
     my $response = $self->get($query);
-    unless($response->is_success) {
-        croak $response->status_line;
-    }
-    else {
-        my @ret           = ();
-        my $inside_list   = 0;
-        my $current_class = undef;
-        my $start_h       = sub {
-            my($tagname, $attr) = @_;
-            if(   lc($tagname) eq 'ul' 
-               && defined($attr->{id})
-               && lc($attr->{id}) eq 'results')
-            {
-                $inside_list = 1;
-                return;
-            }
-            elsif($inside_list) {
-                if(lc($tagname) eq 'span') {
-                    my $class = lc($attr->{class});
-                    if(   defined($class)
-                       && $class =~ /^(?:song|artist|album)$/i)
-                    {
-                        $current_class = $class;
-                        croak 'Unexpected results while parsing HTML'
-                            if !@ret || defined($ret[$#ret]->{$current_class});
-                    }
-                }
-                elsif(lc($tagname) eq 'a') {
-                    push @ret, { url => $attr->{href} || '' };
-                }
-            }
-        };
-        my $text_h        = sub {
-            return unless $inside_list && $current_class;
-            my $text = shift;
-            $ret[$#ret]->{$current_class} = $text;
-            undef $current_class;
-        };
-        my $end_h         = sub {
-            return unless $inside_list;
-            my $tagname = shift;
-            if(lc($tagname) eq 'ul') {
-                $inside_list = 0;
-            }
-            elsif(lc($tagname) eq 'span') {
-                undef $current_class;
-            }
-        };
-        my $parser = HTML::Parser->new(
-            api_version     => 3,
-            start_h         => [$start_h, 'tagname, attr'],
-            text_h          => [$text_h, 'text'],
-            end_h           => [$end_h, 'tagname'],
-            marked_sections => 1,
-        );
-        $parser->parse($response->decoded_content);
-        $parser->eof;
-        for my $res (@ret) {
-            $res->{$_} ||= '' for qw(album artist song);
-            $res->{album}  =~ s/^\s+on\s//;
-            $res->{artist} =~ s/^\s+by\s//;
+    $response->is_success or croak $response->status_line;
+
+    my @ret           = ();
+    my $inside_list   = 0;
+    my $current_class = undef;
+
+    my $start_h = sub {
+        my $tagname = lc(shift);
+        my $attr    = shift;
+        if(    $tagname eq 'ul'
+            && defined($attr->{id})
+            && lc($attr->{id}) eq 'results')
+        {
+            $inside_list = 1;
         }
-        return wantarray ? @ret : $ret[0];
+        elsif($inside_list) {
+            if($tagname eq 'span') {
+                my $class = $attr->{class};
+                if(defined($class) && $class =~ /^(?:song|artist|album)$/i) {
+                    $current_class = lc $class;
+                    croak 'Unexpected results while parsing HTML'
+                        if !@ret || defined($ret[$#ret]->{$current_class});
+                }
+            }
+            elsif($tagname eq 'a') {
+                push @ret, { url => $attr->{href} || '' };
+            }
+        }
+    };
+
+    my $text_h = sub {
+        return unless $inside_list && $current_class;
+        my $text = shift;
+        $ret[$#ret]->{$current_class} = $text;
+        undef $current_class;
+    };
+
+    my $end_h = sub {
+        return unless $inside_list;
+        my $tagname = lc(shift);
+        if($tagname eq 'ul') {
+            $inside_list = 0;
+        }
+        elsif($tagname eq 'span') {
+            undef $current_class;
+        }
+    };
+
+    my $parser = HTML::Parser->new(
+        api_version     => 3,
+        start_h         => [$start_h, 'tagname, attr'],
+        text_h          => [$text_h, 'text'],
+        end_h           => [$end_h, 'tagname'],
+        marked_sections => 1,
+    );
+    $parser->parse($response->decoded_content);
+    $parser->eof;
+
+    for my $res (@ret) {
+        $res->{$_} ||= '' for qw(album artist song);
+        $res->{album}  =~ s/^\s+on\s//;
+        $res->{artist} =~ s/^\s+by\s//;
     }
+
+    return wantarray ? @ret : $ret[0];
 }
 
 ################################################################################
 
 sub _default {
-    $default ||= __PACKAGE__->new;
-    return $default;
+    return $default ||= __PACKAGE__->new;
 }
 
 sub _self_or_default {
-    if(defined($_[0])) {
-        if(ref($_[0])) {
+    if(defined $_[0]) {
+        if(ref $_[0]) {
             # first arg defined and ref, put in default unless proper class
             unshift @_, _default() unless UNIVERSAL::isa($_[0], __PACKAGE__);
         }
