@@ -55,7 +55,7 @@ use LWP::UserAgent;
 
 our @EXPORT_OK = qw(tinysong);
 our @ISA       = qw(LWP::UserAgent Exporter);
-our $VERSION   = '0.03';
+our $VERSION   = '0.04';
 
 my $default;
 
@@ -123,7 +123,8 @@ supported by L<LWP::UserAgent>.
 
 =item tinysong ( QUERY_STRING [, LIMIT ] )
 
-Does exactly the same thing as the functional version (see above).
+Does exactly the same thing as the functional version (see above), but
+should be called on a C<WWW::TinySong> object.
 
 =back
 
@@ -138,7 +139,7 @@ sub tinysong {
         $limit = 1; # no point in searching for more if only one is needed
     }
     
-    my $query = sprintf('http://tinysong.com?s=%s&limit=%d',
+    my $query = sprintf('http://tinysong.com/?s=%s&limit=%d',
         CGI::escape(lc($string)), $limit);
     my $response = $self->get($query);
     $response->is_success or croak $response->status_line;

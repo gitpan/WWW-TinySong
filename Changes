@@ -1,6 +1,12 @@
 Revision history for WWW::TinySong
 ==================================
 
+January 13, 2009
+----------------
+* apparently request URL wasn't working with proxies, fixed now
+  thanks to Sebastian Holzner
+* released version 0.04
+
 January 4, 2009
 ---------------
  * network-related tests now conditional
