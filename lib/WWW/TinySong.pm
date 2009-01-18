@@ -2,15 +2,15 @@ package WWW::TinySong;
 
 =head1 NAME
 
-WWW::TinySong - Get free music links using TinySong
+WWW::TinySong - Get free, shortened music links from tinysong.com
 
 =head1 SYNOPSIS
 
-  # functional 
+  # function-oriented
 
   use WWW::TinySong qw(tinysong);
 
-  for(tinysong("never gonna give you up")) {
+  for(tinysong("we are the champions")) {
       printf("%s", $_->{song});
       printf(" by %s", $_->{artist}) if $_->{artist};
       printf(" on %s", $_->{album}) if $_->{album};
@@ -27,7 +27,7 @@ WWW::TinySong - Get free music links using TinySong
   $ts->timeout(10);
   $ts->env_proxy();
 
-  for($ts->tinysong("never gonna give you up")) {
+  for($ts->tinysong("we are the champions")) {
       printf("%s", $_->{song});
       printf(" by %s", $_->{artist}) if $_->{artist};
       printf(" on %s", $_->{album}) if $_->{album};
@@ -36,14 +36,15 @@ WWW::TinySong - Get free music links using TinySong
 
 =head1 DESCRIPTION
 
-TinySong is a web app that can be queried for a song and returns a tiny
-URL, allowing you to listen to the song for free online and share it with
-friends. L<WWW::TinySong> is a Perl interface to this service, allowing you
-to programmatically search its underlying database.
+tinysong.com is a web app that can be queried for a song and returns a
+tiny URL, allowing you to listen to the song for free online and share
+it with friends. L<WWW::TinySong> is a Perl interface to this service,
+allowing you to programmatically search its underlying database. (Yes,
+for those who are curious, the module currently works by scraping.)
 
 =cut
 
-use 5.008;
+use 5.006;
 use strict;
 use warnings;
 
@@ -55,26 +56,26 @@ use LWP::UserAgent;
 
 our @EXPORT_OK = qw(tinysong);
 our @ISA       = qw(LWP::UserAgent Exporter);
-our $VERSION   = '0.04';
+our $VERSION   = '0.04_01';
+$VERSION       = eval $VERSION;
 
 my $default;
 
-=head1 FUNCTIONAL INTERFACE
+=head1 FUNCTIONS/METHODS
 
-The functional interface should be adequate for most users. If you need
-to customize the L<LWP::UserAgent> used for the underlying retrievals,
-take a look at the object-oriented interface.
+This module defines one public function/method. In the function-oriented
+approach, it would be called directly. Alternatively, it may be called on
+a C<WWW::TinySong> object.
 
 =over 4
 
 =item tinysong ( QUERY_STRING [, LIMIT ] )
 
-Searches the TinySong database for QUERY_STRING, giving up to LIMIT
-results. LIMIT defaults to 10 if not C<defined>. Returns an array in list
-context or the top result in scalar context. Return elements are hashrefs
-with keys C<qw(album artist song url)>. Their values will be the empty
-string if not given by the website. Here's a quick script to
-demonstrate:
+Searches tinysong.com for QUERY_STRING, giving up to LIMIT results. LIMIT
+defaults to 10 if not C<defined>. Returns an array in list context or the
+top result in scalar context. Return elements are hashrefs with keys
+C<qw(album artist song url)>. Their values will be the empty string if not
+given by the website. Here's a quick script to demonstrate:
 
   #!/usr/bin/perl
 
@@ -85,48 +86,40 @@ demonstrate:
 
 ...and its output on my system at the time of this writing:
 
-  $VAR1 = {
-            'album' => 'Golden Beatles',
-            'artist' => 'The Beatles',
-            'song' => 'A Hard Day\'s Night',
-            'url' => 'http://tinysong.com/2Cqe'
-          };
-  $VAR2 = {
-            'album' => '',
-            'artist' => 'The Beatles',
-            'song' => 'A Hard Day\'s Night',
-            'url' => 'http://tinysong.com/2BI5'
-          };
-  $VAR3 = {
-            'album' => 'The Beatles 1',
-            'artist' => 'The Beatles',
-            'song' => 'A Hard Day\'s Night',
-            'url' => 'http://tinysong.com/2Cqi'
-          };
+$VAR1 = {
+          'album' => 'A Hard Day\'s Night',
+          'artist' => 'The Beatles',
+          'song' => 'A Hard Day\'s Night',
+          'url' => 'http://tinysong.com/21q3'
+        };
+$VAR2 = {
+          'album' => 'A Hard Day\'s Night',
+          'artist' => 'The Beatles',
+          'song' => 'And I Love Her',
+          'url' => 'http://tinysong.com/2i03'
+        };
+$VAR3 = {
+          'album' => 'A Hard Day\'s Night',
+          'artist' => 'The Beatles',
+          'song' => 'If I Fell',
+          'url' => 'http://tinysong.com/21q4'
+        };
 
 =back
 
-=head1 OBJECT-ORIENTED INTERFACE
+=head1 FUNCTION-ORIENTED VS. OBJECT-ORIENTED INTERFACE
 
-=head2 CONSTRUCTORS
+The function-oriented interface should be adequate for many users. This
+involves just importing what you need into your namespace and calling it
+as any other function.
 
-L<WWW::TinySong> subclasses L<LWP::UserAgent>, so you can use the same
-constructors. You could even C<bless> an existing L<LWP::UserAgent> as
-L<WWW::TinySong>, not that I'm recommending you do that.
-
-=head2 METHODS
-
-L<WWW::TinySong> implements one more method in addition to the ones
-supported by L<LWP::UserAgent>.
-
-=over 4
-
-=item tinysong ( QUERY_STRING [, LIMIT ] )
-
-Does exactly the same thing as the functional version (see above), but
-should be called on a C<WWW::TinySong> object.
-
-=back
+If you need to customize the underlying L<LWP::UserAgent> used for retrievals,
+you would use the object-oriented interface: create a L<WWW::TinySong> with
+the desired options and call the methods of the resulting object. Note that
+L<WWW::TinySong> subclasses L<LWP::UserAgent>, so C<new> accepts the same
+arguments, and all L<LWP::UserAgent> methods are supported. You could
+even C<bless> an existing L<LWP::UserAgent> as L<WWW::TinySong>, not that
+I'm recommending you do that.
 
 =cut
 

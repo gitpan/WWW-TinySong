@@ -1,18 +1,29 @@
 Revision history for WWW::TinySong
 ==================================
 
+January 17, 2009
+----------------
+ * updated documentation
+ * testing for unexpected results was broken through no fault of this
+   module: I guess the Grooveshark/TinySong team wanted to minimize
+   rickrolling because there's no more Rick Astley in the top ten
+   search results for "Never Gonna Give You Up"; changed tests to use
+   "We Are The Champions" instead, does anyone besides Queen have such
+   a song?
+ * released version 0.04_01
+
 January 13, 2009
 ----------------
-* apparently request URL wasn't working with proxies, fixed now
-  thanks to Sebastian Holzner
-* released version 0.04
+ * apparently request URL wasn't working with proxies, hopefully fixed
+   now thanks to Sebastian Holzner
+ * released version 0.04
 
 January 4, 2009
 ---------------
  * network-related tests now conditional
- * executed "make dist" after ExtUtils::MakeMaker upgrade
+ * executed "make dist" with upgraded ExtUtils::MakeMaker
  * improved documentation with examples
- * added (simpler) functional interface in addition to the existing
+ * added (simpler) function-oriented interface in addition to the existing
    object-oriented one
  * released version 0.02
  * minor code tweaks and documentation improvements
