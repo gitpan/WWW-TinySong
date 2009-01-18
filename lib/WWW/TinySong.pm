@@ -2,7 +2,7 @@ package WWW::TinySong;
 
 =head1 NAME
 
-WWW::TinySong - Get free, shortened music links from tinysong.com
+WWW::TinySong - Get free music links from tinysong.com
 
 =head1 SYNOPSIS
 
@@ -56,7 +56,7 @@ use LWP::UserAgent;
 
 our @EXPORT_OK = qw(tinysong);
 our @ISA       = qw(LWP::UserAgent Exporter);
-our $VERSION   = '0.04_01';
+our $VERSION   = '0.04_02';
 $VERSION       = eval $VERSION;
 
 my $default;
@@ -65,7 +65,7 @@ my $default;
 
 This module defines one public function/method. In the function-oriented
 approach, it would be called directly. Alternatively, it may be called on
-a C<WWW::TinySong> object.
+a C<WWW::TinySong> object. See the next section for details.
 
 =over 4
 
@@ -86,24 +86,24 @@ given by the website. Here's a quick script to demonstrate:
 
 ...and its output on my system at the time of this writing:
 
-$VAR1 = {
-          'album' => 'A Hard Day\'s Night',
-          'artist' => 'The Beatles',
-          'song' => 'A Hard Day\'s Night',
-          'url' => 'http://tinysong.com/21q3'
-        };
-$VAR2 = {
-          'album' => 'A Hard Day\'s Night',
-          'artist' => 'The Beatles',
-          'song' => 'And I Love Her',
-          'url' => 'http://tinysong.com/2i03'
-        };
-$VAR3 = {
-          'album' => 'A Hard Day\'s Night',
-          'artist' => 'The Beatles',
-          'song' => 'If I Fell',
-          'url' => 'http://tinysong.com/21q4'
-        };
+  $VAR1 = {
+            'album' => 'A Hard Day\'s Night',
+            'artist' => 'The Beatles',
+            'song' => 'A Hard Day\'s Night',
+            'url' => 'http://tinysong.com/21q3'
+          };
+  $VAR2 = {
+            'album' => 'A Hard Day\'s Night',
+            'artist' => 'The Beatles',
+            'song' => 'And I Love Her',
+            'url' => 'http://tinysong.com/2i03'
+          };
+  $VAR3 = {
+            'album' => 'A Hard Day\'s Night',
+            'artist' => 'The Beatles',
+            'song' => 'If I Fell',
+            'url' => 'http://tinysong.com/21q4'
+          };
 
 =back
 
@@ -121,6 +121,8 @@ arguments, and all L<LWP::UserAgent> methods are supported. You could
 even C<bless> an existing L<LWP::UserAgent> as L<WWW::TinySong>, not that
 I'm recommending you do that.
 
+The L</SYNOPSIS> demonstrates both ways of using this module.
+
 =cut
 
 sub tinysong {
@@ -132,9 +134,8 @@ sub tinysong {
         $limit = 1; # no point in searching for more if only one is needed
     }
     
-    my $query = sprintf('http://tinysong.com/?s=%s&limit=%d',
-        CGI::escape(lc($string)), $limit);
-    my $response = $self->get($query);
+    my $response = $self->get(sprintf('http://tinysong.com/?s=%s&limit=%d',
+        CGI::escape(lc($string)), $limit));
     $response->is_success or croak $response->status_line;
 
     my @ret           = ();
@@ -153,7 +154,7 @@ sub tinysong {
         elsif($inside_list) {
             if($tagname eq 'span') {
                 my $class = $attr->{class};
-                if(defined($class) && $class =~ /^(?:song|artist|album)$/i) {
+                if(defined($class) && $class =~ /^(?:album|artist|song)$/i) {
                     $current_class = lc $class;
                     croak 'Unexpected results while parsing HTML'
                         if !@ret || defined($ret[$#ret]->{$current_class});
@@ -190,7 +191,9 @@ sub tinysong {
         end_h           => [$end_h, 'tagname'],
         marked_sections => 1,
     );
-    $parser->parse($response->decoded_content);
+    my $content = $response->decoded_content
+        or croak 'Problem reading page content';
+    $parser->parse($content);
     $parser->eof;
 
     for my $res (@ret) {
@@ -237,7 +240,8 @@ L<http://tinysong.com/>, L<LWP::UserAgent>
 
 =head1 BUGS
 
-Please report them.
+Please report them:
+L<http://rt.cpan.org/Public/Dist/Display.html?Name=WWW-TinySong>
 
 =head1 AUTHOR
 

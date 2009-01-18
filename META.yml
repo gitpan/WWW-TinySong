@@ -1,7 +1,7 @@
 --- #YAML:1.0
 name:               WWW-TinySong
-version:            0.04_01
-abstract:           Get free, shortened music links from tinysong.com
+version:            0.04_02
+abstract:           Get free music links from tinysong.com
 author:
     - Miorel-Lucian Palii <mlpalii@gmail.com>
 license:            perl

@@ -1,11 +1,11 @@
 Changes                                  Module change log
-MANIFEST
+MANIFEST                                 
 Makefile.PL                              Generate Makefile
-README
-examples/champions.pl
-examples/hard_day.pl
-lib/WWW/TinySong.pm
-t/WWW-TinySong.t
+README                                   
+examples/champions.pl                    
+examples/hard_day.pl                     
+lib/WWW/TinySong.pm                      
+t/WWW-TinySong.t                         
 t/pod-coverage.t                         Test POD Coverage
 t/pod.t                                  Test POD
 META.yml                                 Module meta-data (added by MakeMaker)

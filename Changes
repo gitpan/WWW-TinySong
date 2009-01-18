@@ -1,6 +1,12 @@
 Revision history for WWW::TinySong
 ==================================
 
+January 18, 2009
+----------------
+ * minor code tweaks and fixes to documentation
+ * looking into failed tests with perl 5.6.2
+ * released version 0.04_02
+
 January 17, 2009
 ----------------
  * updated documentation
