@@ -24,8 +24,8 @@ WWW::TinySong - Get free music links from tinysong.com
   
   my $ts = new WWW::TinySong;
   
-  $ts->timeout(10);
-  $ts->env_proxy();
+  $ts->timeout(10); # timeout() is inherited from LWP::UserAgent
+  $ts->env_proxy(); # env_proxy() is inherited from LWP::UserAgent
 
   for($ts->tinysong("we are the champions")) {
       printf("%s", $_->{song});
@@ -56,12 +56,12 @@ use LWP::UserAgent;
 
 our @EXPORT_OK = qw(tinysong);
 our @ISA       = qw(LWP::UserAgent Exporter);
-our $VERSION   = '0.04_02';
+our $VERSION   = '0.04_03';
 $VERSION       = eval $VERSION;
 
 my $default;
 
-=head1 FUNCTIONS/METHODS
+=head1 FUNCTIONS / METHODS
 
 This module defines one public function/method. In the function-oriented
 approach, it would be called directly. Alternatively, it may be called on
@@ -191,7 +191,7 @@ sub tinysong {
         end_h           => [$end_h, 'tagname'],
         marked_sections => 1,
     );
-    my $content = $response->decoded_content
+    my $content = $response->decoded_content || $response->content
         or croak 'Problem reading page content';
     $parser->parse($content);
     $parser->eof;
