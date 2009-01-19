@@ -6,28 +6,13 @@ WWW::TinySong - Get free music links from tinysong.com
 
 =head1 SYNOPSIS
 
-  # function-oriented
-
   use WWW::TinySong qw(tinysong);
 
+  my $ua = WWW::TinySong::ua;
+  $ua->timeout(10);
+  $ua->env_proxy;
+
   for(tinysong("we are the champions")) {
-      printf("%s", $_->{song});
-      printf(" by %s", $_->{artist}) if $_->{artist};
-      printf(" on %s", $_->{album}) if $_->{album};
-      printf(" <%s>\n", $_->{url});
-  }
-
-
-  # object-oriented
-
-  use WWW::TinySong;
-  
-  my $ts = new WWW::TinySong;
-  
-  $ts->timeout(10); # timeout() is inherited from LWP::UserAgent
-  $ts->env_proxy(); # env_proxy() is inherited from LWP::UserAgent
-
-  for($ts->tinysong("we are the champions")) {
       printf("%s", $_->{song});
       printf(" by %s", $_->{artist}) if $_->{artist};
       printf(" on %s", $_->{album}) if $_->{album};
@@ -52,20 +37,20 @@ use Carp;
 use CGI;
 use Exporter;
 use HTML::Parser;
-use LWP::UserAgent;
 
 our @EXPORT_OK = qw(tinysong);
-our @ISA       = qw(LWP::UserAgent Exporter);
-our $VERSION   = '0.04_03';
+our @ISA       = qw(Exporter);
+our $VERSION   = '0.04_04';
 $VERSION       = eval $VERSION;
 
-my $default;
+my $ua;
+my $service;
 
-=head1 FUNCTIONS / METHODS
+=head1 FUNCTIONS
 
-This module defines one public function/method. In the function-oriented
-approach, it would be called directly. Alternatively, it may be called on
-a C<WWW::TinySong> object. See the next section for details.
+The module defines the functions described below. C<tinysong> implements
+the main functionality of this module and is the only function that may be
+imported. The others are utility functions.
 
 =over 4
 
@@ -105,28 +90,10 @@ given by the website. Here's a quick script to demonstrate:
             'url' => 'http://tinysong.com/21q4'
           };
 
-=back
-
-=head1 FUNCTION-ORIENTED VS. OBJECT-ORIENTED INTERFACE
-
-The function-oriented interface should be adequate for many users. This
-involves just importing what you need into your namespace and calling it
-as any other function.
-
-If you need to customize the underlying L<LWP::UserAgent> used for retrievals,
-you would use the object-oriented interface: create a L<WWW::TinySong> with
-the desired options and call the methods of the resulting object. Note that
-L<WWW::TinySong> subclasses L<LWP::UserAgent>, so C<new> accepts the same
-arguments, and all L<LWP::UserAgent> methods are supported. You could
-even C<bless> an existing L<LWP::UserAgent> as L<WWW::TinySong>, not that
-I'm recommending you do that.
-
-The L</SYNOPSIS> demonstrates both ways of using this module.
-
 =cut
 
 sub tinysong {
-    my($self, $string, $limit) = _self_or_default(@_);
+    my($string, $limit) = @_;
     if(wantarray) {
         $limit = 10 unless defined $limit;
     }
@@ -134,7 +101,7 @@ sub tinysong {
         $limit = 1; # no point in searching for more if only one is needed
     }
     
-    my $response = $self->get(sprintf('http://tinysong.com/?s=%s&limit=%d',
+    my $response = ua()->get(sprintf('%s?s=%s&limit=%d', service(),
         CGI::escape(lc($string)), $limit));
     $response->is_success or croak $response->status_line;
 
@@ -205,29 +172,43 @@ sub tinysong {
     return wantarray ? @ret : $ret[0];
 }
 
-################################################################################
+=item ua ( [ USER_AGENT ] )
 
-sub _default {
-    return $default ||= __PACKAGE__->new;
+Returns the user agent object used for all retrievals, first setting
+it to USER_AGENT if it's specified. Defaults to a C<new> L<LWP::UserAgent>.
+You can customize this object as in the L</SYNOPSIS>.
+
+If you decide to replace the user agent altogether, you don't have to use
+a L<LWP::UserAgent>: the only requirement is that the object you use can
+C<get> a URL and return a response object.
+
+=cut
+
+sub ua {
+    if(@_) {
+        $ua = shift;
+    }
+    elsif(!defined($ua)) {
+        eval {
+            require LWP::UserAgent;
+            $ua = new LWP::UserAgent;
+        };
+    }
+    defined($ua) or croak 'Problem setting user agent';
+    return $ua;
 }
 
-sub _self_or_default {
-    if(defined $_[0]) {
-        if(ref $_[0]) {
-            # first arg defined and ref, put in default unless proper class
-            unshift @_, _default() unless UNIVERSAL::isa($_[0], __PACKAGE__);
-        }
-        else {
-            # first arg defined but not ref, replace if class or put in default
-            shift if UNIVERSAL::isa($_[0], __PACKAGE__);
-            unshift @_, _default();
-        }
-    }
-    else {
-        # first arg not defined, put in default
-        unshift @_, _default();
-    }
-    return @_;
+=item service ( [ URL ] )
+
+Returns the web address of the service used by this module, first setting
+it to URL if it's specified. Defaults to L<http://tinysong.com/>.
+
+=back
+
+=cut
+
+sub service {
+    return $service = @_ ? shift : $service || 'http://tinysong.com/';
 }
 
 1;

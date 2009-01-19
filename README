@@ -1,4 +1,4 @@
-WWW::TinySong version 0.04_03
+WWW::TinySong version 0.04_04
 =============================
 
 tinysong.com is a web app that can be queried for a song and returns a
@@ -6,6 +6,13 @@ tiny URL, allowing you to listen to the song for free online and share
 it with friends. WWW::TinySong is a Perl interface to this service,
 allowing you to programmatically search its underlying database. (Yes,
 for those who are curious, the module currently works by scraping.)
+
+Warning: this release breaks backwards compatibility by doing away with
+the object-oriented way of using this module because I've decided it was
+overkill and there's a better to make customization possible. Given the
+young age and obscurity of this module, I don't anticipate it will affect
+anyone's code, but here's the obligatory warning just in case.
+
 
 INSTALLATION
 

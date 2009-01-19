@@ -5,6 +5,9 @@ January 19, 2009
 ----------------
  * problem with perl 5.6.2 appears to be in reading the page content
  * released version 0.04_03
+ * decided that there's a better way to allow customizing the user agent
+   and did away with the object-oriented approach
+ * released version 0.04_04
 
 January 18, 2009
 ----------------
