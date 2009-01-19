@@ -1,6 +1,6 @@
 --- #YAML:1.0
 name:               WWW-TinySong
-version:            0.04_04
+version:            0.04_05
 abstract:           Get free music links from tinysong.com
 author:
     - Miorel-Lucian Palii <mlpalii@gmail.com>

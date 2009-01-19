@@ -40,11 +40,11 @@ use HTML::Parser;
 
 our @EXPORT_OK = qw(tinysong);
 our @ISA       = qw(Exporter);
-our $VERSION   = '0.04_04';
+our $VERSION   = '0.04_05';
 $VERSION       = eval $VERSION;
 
 my $ua;
-my $service;
+my $service = 'http://tinysong.com/';
 
 =head1 FUNCTIONS
 
@@ -54,7 +54,7 @@ imported. The others are utility functions.
 
 =over 4
 
-=item tinysong ( QUERY_STRING [, LIMIT ] )
+=item WWW::TinySong::tinysong( QUERY_STRING [, LIMIT ])
 
 Searches tinysong.com for QUERY_STRING, giving up to LIMIT results. LIMIT
 defaults to 10 if not C<defined>. Returns an array in list context or the
@@ -172,7 +172,7 @@ sub tinysong {
     return wantarray ? @ret : $ret[0];
 }
 
-=item ua ( [ USER_AGENT ] )
+=item WWW::TinySong::ua( [ USER_AGENT ] )
 
 Returns the user agent object used for all retrievals, first setting
 it to USER_AGENT if it's specified. Defaults to a C<new> L<LWP::UserAgent>.
@@ -194,11 +194,11 @@ sub ua {
             $ua = new LWP::UserAgent;
         };
     }
-    defined($ua) or croak 'Problem setting user agent';
+    defined($ua) or carp 'Problem setting user agent';
     return $ua;
 }
 
-=item service ( [ URL ] )
+=item WWW::TinySong::service( [ URL ] )
 
 Returns the web address of the service used by this module, first setting
 it to URL if it's specified. Defaults to L<http://tinysong.com/>.
@@ -208,16 +208,33 @@ it to URL if it's specified. Defaults to L<http://tinysong.com/>.
 =cut
 
 sub service {
-    return $service = @_ ? shift : $service || 'http://tinysong.com/';
+    $service = shift if @_;
+    return $service;
 }
 
 1;
 
 __END__
 
+=head1 BE NICE TO THE SERVERS
+
+Please don't abuse the servers. If you anticipate making a large number of
+requests, don't make them too frequently. There are several CPAN modules
+that can help you make sure your code is nice. Try, for example,
+L<LWP::RobotUA> as the user agent:
+
+  use WWW::TinySong qw(tinysong);
+  use LWP::RobotUA;
+  
+  my $ua = LWP::RobotUA->new('my-nice-robot/0.1', 'me@example.org');
+  
+  WWW::TinySong::ua($ua);
+  
+  # tinysong() should now be well-behaved
+
 =head1 SEE ALSO
 
-L<http://tinysong.com/>, L<LWP::UserAgent>
+L<http://tinysong.com/>, L<LWP::UserAgent>, L<LWP::RobotUA>
 
 =head1 BUGS
 
