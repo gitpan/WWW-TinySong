@@ -1,6 +1,14 @@
 Revision history for WWW::TinySong
 ==================================
 
+January 20, 2009
+----------------
+ * problem with perl 5.6 seems fixed in version 0.04_05, let's hope it is
+ * couple more tweaks to the interface, it now seems like a good way to
+   do things, at least until I become a better programmer
+ * improved tests
+ * released version 0.05
+
 January 19, 2009
 ----------------
  * problem with perl 5.6.2 appears to be in reading the page content

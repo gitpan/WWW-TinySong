@@ -1,22 +1,34 @@
-use Test::More tests => 4;
+use Test::More tests => 8;
 BEGIN { use_ok('WWW::TinySong') };
 
 my $ua;
-ok($ua = WWW::TinySong::ua, 'ua() did not return a true value');
-
+ok($ua = WWW::TinySong->ua, 'ua() returns true value');
 $ua->timeout(10);
 $ua->env_proxy;
+
+my $service;
+ok($service = WWW::TinySong->service, 'service() returns true value');
+like($service, qr(^http://)i, 'service() returns a http URL');
+
 
 SKIP: {
     my $conn_ok;
     eval 'use Net::Config qw(%NetConfig); $conn_ok = $NetConfig{test_hosts}';
-    skip 'Net::Config needed for network-related tests', 2 if $@;
-    skip 'No network connection', 2 unless $conn_ok;
+    skip 'Net::Config needed for network-related tests', 4 if $@;
+    skip 'No network connection', 4 unless $conn_ok;
 
     my @res;
-        
-    ok(@res = WWW::TinySong::tinysong('we are the champions'),
-        'tinysong() did not return a true value');
+
+    # basic check
+    ok(@res = WWW::TinySong->tinysong('we are the champions'),
+        'tinysong() returns true value');
     like(join('', map {$_->{artist}} @res), qr/queen/i,
-        'tinysong() gave unexpected results');
+        'tinysong() gives expected results');
+
+    # imported check
+    WWW::TinySong->import('tinysong');
+    ok(@res = tinysong('a hard day\'s night'),
+        'imported tinysong() returns true value');
+    like(join('', map {$_->{artist}} @res), qr/beatles/i,
+        'imported tinysong() gives expected results');    
 }

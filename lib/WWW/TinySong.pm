@@ -6,11 +6,9 @@ WWW::TinySong - Get free music links from tinysong.com
 
 =head1 SYNOPSIS
 
-  use WWW::TinySong qw(tinysong);
+  # basic use
 
-  my $ua = WWW::TinySong::ua;
-  $ua->timeout(10);
-  $ua->env_proxy;
+  use WWW::TinySong qw(tinysong);
 
   for(tinysong("we are the champions")) {
       printf("%s", $_->{song});
@@ -19,13 +17,27 @@ WWW::TinySong - Get free music links from tinysong.com
       printf(" <%s>\n", $_->{url});
   }
 
+  # customize the user agent
+
+  use LWP::UserAgent;
+
+  my $ua = new LWP::UserAgent;
+  $ua->timeout(10);
+  $ua->env_proxy;
+
+  WWW::TinySong->ua($ua);
+
+  # customize the service
+
+  WWW::TinySong->service('http://tinysong.com/');
+
 =head1 DESCRIPTION
 
-tinysong.com is a web app that can be queried for a song and returns a
-tiny URL, allowing you to listen to the song for free online and share
-it with friends. L<WWW::TinySong> is a Perl interface to this service,
-allowing you to programmatically search its underlying database. (Yes,
-for those who are curious, the module currently works by scraping.)
+tinysong.com is a web app that can be queried for a song and returns a tiny
+URL, allowing you to listen to the song for free online and share it with
+friends.  L<WWW::TinySong> is a Perl interface to this service, allowing you
+to programmatically search its underlying database.  (Yes, for those who are
+curious, the module currently works by scraping.)
 
 =cut
 
@@ -40,33 +52,33 @@ use HTML::Parser;
 
 our @EXPORT_OK = qw(tinysong);
 our @ISA       = qw(Exporter);
-our $VERSION   = '0.04_05';
-$VERSION       = eval $VERSION;
+our $VERSION   = '0.05';
 
-my $ua;
-my $service = 'http://tinysong.com/';
+my($ua, $service);
 
 =head1 FUNCTIONS
 
-The module defines the functions described below. C<tinysong> implements
-the main functionality of this module and is the only function that may be
-imported. The others are utility functions.
+The main functionality is implemented by C<tinysong>.  It may be imported
+into your namespace and used as any other function.  The other functions
+allow the customization of requests issued by this module.
 
 =over 4
 
-=item WWW::TinySong::tinysong( QUERY_STRING [, LIMIT ])
+=item tinysong( $QUERY_STRING [, $LIMIT ] )
 
-Searches tinysong.com for QUERY_STRING, giving up to LIMIT results. LIMIT
-defaults to 10 if not C<defined>. Returns an array in list context or the
-top result in scalar context. Return elements are hashrefs with keys
-C<qw(album artist song url)>. Their values will be the empty string if not
-given by the website. Here's a quick script to demonstrate:
+=item WWW::TinySong->tinysong( $QUERY_STRING [, $LIMIT ] )
+
+Searches tinysong.com for $QUERY_STRING, giving up to $LIMIT results.
+$LIMIT defaults to 10 if not C<defined>.  Returns an array in list context
+or the top result in scalar context.  Return elements are hashrefs with
+keys C<qw(album artist song url)>. Their values will be the empty string if
+not given by the website.  Here's a quick script to demonstrate:
 
   #!/usr/bin/perl
 
   use WWW::TinySong qw(tinysong);
   use Data::Dumper;
-   
+
   print Dumper tinysong("a hard day's night", 3);
 
 ...and its output on my system at the time of this writing:
@@ -93,15 +105,18 @@ given by the website. Here's a quick script to demonstrate:
 =cut
 
 sub tinysong {
-    my($string, $limit) = @_;
+    unshift @_, __PACKAGE__ # add the package name unless already there
+        unless defined($_[0]) && UNIVERSAL::isa($_[0], __PACKAGE__);
+
+    my($pkg, $string, $limit) = @_;
     if(wantarray) {
         $limit = 10 unless defined $limit;
     }
     else {
         $limit = 1; # no point in searching for more if only one is needed
     }
-    
-    my $response = ua()->get(sprintf('%s?s=%s&limit=%d', service(),
+
+    my $response = $pkg->ua->get(sprintf('%s?s=%s&limit=%d', $pkg->service,
         CGI::escape(lc($string)), $limit));
     $response->is_success or croak $response->status_line;
 
@@ -158,9 +173,7 @@ sub tinysong {
         end_h           => [$end_h, 'tagname'],
         marked_sections => 1,
     );
-    my $content = $response->decoded_content || $response->content
-        or croak 'Problem reading page content';
-    $parser->parse($content);
+    $parser->parse($response->decoded_content || $response->content);
     $parser->eof;
 
     for my $res (@ret) {
@@ -172,45 +185,44 @@ sub tinysong {
     return wantarray ? @ret : $ret[0];
 }
 
-=item WWW::TinySong::ua( [ USER_AGENT ] )
+=item WWW::TinySong->ua( [ $USER_AGENT ] )
 
-Returns the user agent object used for all retrievals, first setting
-it to USER_AGENT if it's specified. Defaults to a C<new> L<LWP::UserAgent>.
-You can customize this object as in the L</SYNOPSIS>.
-
-If you decide to replace the user agent altogether, you don't have to use
-a L<LWP::UserAgent>: the only requirement is that the object you use can
-C<get> a URL and return a response object.
+Returns the user agent object used by this module for web retrievals, first
+setting it to $USER_AGENT if it's specified.  Defaults to a C<new>
+L<LWP::UserAgent>.  If you explicitly set this, you don't have to use a
+LWP::UserAgent, it may be anything that can C<get> a URL and return a
+response object.
 
 =cut
 
 sub ua {
-    if(@_) {
-        $ua = shift;
+    if($_[1]) {
+        $ua = $_[1];
     }
-    elsif(!defined($ua)) {
+    elsif(!$ua) {
         eval {
             require LWP::UserAgent;
             $ua = new LWP::UserAgent;
         };
+        carp 'Problem setting user agent' if $@;
     }
-    defined($ua) or carp 'Problem setting user agent';
     return $ua;
 }
 
-=item WWW::TinySong::service( [ URL ] )
+=item WWW::TinySong->service( [ $URL ] )
 
 Returns the web address of the service used by this module, first setting
-it to URL if it's specified. Defaults to L<http://tinysong.com/>.
-
-=back
+it to $URL if it's specified.  Defaults to <http://tinysong.com/>.
 
 =cut
 
 sub service {
-    $service = shift if @_;
-    return $service;
+    return $service = $_[1] ? $_[1] : $service || 'http://tinysong.com/';
 }
+
+=back
+
+=cut
 
 1;
 
@@ -218,18 +230,18 @@ __END__
 
 =head1 BE NICE TO THE SERVERS
 
-Please don't abuse the servers. If you anticipate making a large number of
-requests, don't make them too frequently. There are several CPAN modules
-that can help you make sure your code is nice. Try, for example,
-L<LWP::RobotUA> as the user agent:
+Please don't abuse the tinysong.com web service.  If you anticipate making
+a large number of requests, don't make them too frequently.  There are
+several CPAN modules that can help you make sure your code is nice.  Try,
+for example, L<LWP::RobotUA> as the user agent:
 
   use WWW::TinySong qw(tinysong);
   use LWP::RobotUA;
-  
+
   my $ua = LWP::RobotUA->new('my-nice-robot/0.1', 'me@example.org');
-  
-  WWW::TinySong::ua($ua);
-  
+
+  WWW::TinySong->ua($ua);
+
   # tinysong() should now be well-behaved
 
 =head1 SEE ALSO
