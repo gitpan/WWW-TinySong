@@ -31,6 +31,10 @@ WWW::TinySong - Get free music links from tinysong.com
 
   WWW::TinySong->service('http://tinysong.com/');
 
+  # tolerate some server errors
+
+  WWW::TinySong->retries(5);
+
 =head1 DESCRIPTION
 
 tinysong.com is a web app that can be queried for a song and returns a tiny
@@ -52,9 +56,9 @@ use HTML::Parser;
 
 our @EXPORT_OK = qw(tinysong);
 our @ISA       = qw(Exporter);
-our $VERSION   = '0.05';
+our $VERSION   = '0.06';
 
-my($ua, $service);
+my($ua, $service, $retries);
 
 =head1 FUNCTIONS
 
@@ -84,22 +88,22 @@ not given by the website.  Here's a quick script to demonstrate:
 ...and its output on my system at the time of this writing:
 
   $VAR1 = {
-            'album' => 'A Hard Day\'s Night',
-            'artist' => 'The Beatles',
-            'song' => 'A Hard Day\'s Night',
-            'url' => 'http://tinysong.com/21q3'
+            'album' => 'Beatles',
+            'artist' => 'Beatles',
+            'song' => 'Hard Day\'s Night',
+            'url' => 'http://tinysong.com/2gxh'
           };
   $VAR2 = {
-            'album' => 'A Hard Day\'s Night',
+            'album' => '1',
             'artist' => 'The Beatles',
-            'song' => 'And I Love Her',
-            'url' => 'http://tinysong.com/2i03'
+            'song' => 'A Hard Day\'s Night',
+            'url' => 'http://tinysong.com/2BI5'
           };
   $VAR3 = {
             'album' => 'A Hard Day\'s Night',
             'artist' => 'The Beatles',
-            'song' => 'If I Fell',
-            'url' => 'http://tinysong.com/21q4'
+            'song' => 'And I Love Her',
+            'url' => 'http://tinysong.com/2i03'
           };
 
 =cut
@@ -116,9 +120,10 @@ sub tinysong {
         $limit = 1; # no point in searching for more if only one is needed
     }
 
-    my $response = $pkg->ua->get(sprintf('%s?s=%s&limit=%d', $pkg->service,
+    my $service = $pkg->service;
+
+    my $response = $pkg->_get(sprintf('%s?s=%s&limit=%d', $service,
         CGI::escape(lc($string)), $limit));
-    $response->is_success or croak $response->status_line;
 
     my @ret           = ();
     my $inside_list   = 0;
@@ -136,14 +141,18 @@ sub tinysong {
         elsif($inside_list) {
             if($tagname eq 'span') {
                 my $class = $attr->{class};
-                if(defined($class) && $class =~ /^(?:album|artist|song)$/i) {
+                if(defined($class) && $class =~ /^(?:album|artist|song title)$/i) {
                     $current_class = lc $class;
                     croak 'Unexpected results while parsing HTML'
                         if !@ret || defined($ret[$#ret]->{$current_class});
                 }
             }
-            elsif($tagname eq 'a') {
-                push @ret, { url => $attr->{href} || '' };
+            elsif($tagname eq 'a' && $attr->{class} eq 'link') {
+                my $href = $attr->{href};
+                croak 'Bad song link' unless defined $href;
+                croak 'Song link doesn\'t seem to match service'
+                    unless substr($href, 0, length($service)) eq $service;
+                push @ret, {url => $href};
             }
         }
     };
@@ -177,12 +186,25 @@ sub tinysong {
     $parser->eof;
 
     for my $res (@ret) {
+    	$res->{song} = $res->{'song title'};
+    	delete $res->{'song title'};
         $res->{$_} ||= '' for qw(album artist song);
         $res->{album}  =~ s/^\s+on\s//;
         $res->{artist} =~ s/^\s+by\s//;
     }
 
     return wantarray ? @ret : $ret[0];
+}
+
+sub _get {
+    my($response, $pkg, $url) = (undef, @_);
+    for(0..$pkg->retries) {
+        $response = $pkg->ua->get($url);
+        last if $response->is_success;
+        croak $response->message || $response->status_line
+            if $response->is_error && $response->code != 500;
+    }
+    return $response;
 }
 
 =item WWW::TinySong->ua( [ $USER_AGENT ] )
@@ -220,6 +242,21 @@ sub service {
     return $service = $_[1] ? $_[1] : $service || 'http://tinysong.com/';
 }
 
+=item WWW::TinySong->retries( [ $COUNT ] )
+
+Returns the number of consecutive internal server errors the module will ignore
+before failing, first setting it to $COUNT if it's specified.  Defaults to 0
+(croak, do not retry in case of internal server error).  This was created
+because read timeouts seem to be a common problem with the web service.  The
+module now provides the option of doing something more useful than immediately
+failing.
+
+=cut
+
+sub retries {
+    return $retries = $_[1] ? $_[1] : $retries || 0;
+}
+
 =back
 
 =cut
@@ -250,12 +287,21 @@ L<http://tinysong.com/>, L<LWP::UserAgent>, L<LWP::RobotUA>
 
 =head1 BUGS
 
-Please report them:
-L<http://rt.cpan.org/Public/Dist/Display.html?Name=WWW-TinySong>
+Please report them!  Submit a report at 
+L<http://rt.cpan.org/Public/Dist/Display.html?Name=WWW-TinySong>, create an
+issue at L<http://elementsofpuzzle.googlecode.com/>, or drop me an e-mail.
 
 =head1 AUTHOR
 
 Miorel-Lucian Palii, E<lt>mlpalii@gmail.comE<gt>
+
+=head1 VERSION
+
+Version 0.06  (June 22, 2009)
+
+The latest version is hosted on Google Code as part of
+L<http://elementsofpuzzle.googlecode.com/>.  Significant changes are also
+contributed to CPAN: L<http://search.cpan.org/dist/WWW-TinySong/>.
 
 =head1 COPYRIGHT AND LICENSE
 
