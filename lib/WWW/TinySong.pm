@@ -4,17 +4,31 @@ package WWW::TinySong;
 
 WWW::TinySong - Get free music links from tinysong.com
 
+=head1 WARNING
+
+This version of the module is only provided to serve as a transitional step
+between the 0.0x series (which worked by scraping because it was born before
+Tinysong had released an API) and the 1.0+ series, which will break backward
+compatibility by exclusively using field and method names parallel to the
+official documentation at L<http://apidocs.tinysong.com/>.
+
+If you are just getting started with this module, please look for a newer
+version instead, so that you aren't tempted to use deprecated functions.  If
+you already have code depending on the older interface, this version should
+work as a transparent drop-in replacement, but please consider updating: it
+should be a fairly straightforward refactoring.
+
 =head1 SYNOPSIS
 
   # basic use
 
-  use WWW::TinySong qw(tinysong);
+  use WWW::TinySong;
 
-  for(tinysong("we are the champions")) {
-      printf("%s", $_->{song});
-      printf(" by %s", $_->{artist}) if $_->{artist};
-      printf(" on %s", $_->{album}) if $_->{album};
-      printf(" <%s>\n", $_->{url});
+  for(WWW::TinySong->search("we are the champions")) {
+      printf("%s", $_->{songName});
+      printf(" by %s", $_->{artistName});
+      printf(" on %s", $_->{albumName}) if $_->{albumName};
+      printf(" <%s>\n", $_->{tinysongLink});
   }
 
   # customize the user agent
@@ -40,8 +54,7 @@ WWW::TinySong - Get free music links from tinysong.com
 tinysong.com is a web app that can be queried for a song and returns a tiny
 URL, allowing you to listen to the song for free online and share it with
 friends.  L<WWW::TinySong> is a Perl interface to this service, allowing you
-to programmatically search its underlying database.  (Yes, for those who are
-curious, the module currently works by scraping.)
+to programmatically search its underlying database.
 
 =cut
 
@@ -56,63 +69,269 @@ use HTML::Parser;
 
 our @EXPORT_OK = qw(tinysong);
 our @ISA       = qw(Exporter);
-our $VERSION   = '0.06';
+our $VERSION   = '0.50';
 
 my($ua, $service, $retries);
 
 =head1 FUNCTIONS
 
-The main functionality is implemented by C<tinysong>.  It may be imported
-into your namespace and used as any other function.  The other functions
-allow the customization of requests issued by this module.
+The do-it-all function is C<search>.  If you just want a tiny URL, use C<link>.
+C<call> and C<parse> are provided so that you can (hopefully) continue to use
+this module if the tinysong.com API is extended and I'm too lazy or busy to
+update, but you will probably not need to use them otherwise.  C<tinysong> is
+included for backward compatibility but is deprecated.  The other public
+functions are either aliases for one of the above or created to allow the
+customization of requests issued by this module. 
 
 =over 4
+
+=item WWW::TinySong->link( $SEARCH_TERMS )
+
+=cut
+
+sub link { shift->a(@_) }
+
+=item WWW::TinySong->a( $SEARCH_TERMS )
+
+Returns the short URL corresponding to the top result of searching with the
+specified song and artist name terms or C<undef> if no song was found.
+
+=cut
+
+sub a {
+    my($pkg, $search_terms) = @_;
+    my $ret = $pkg->call('a', $search_terms);
+    $ret =~ s/\s+//g;
+    return $ret =~ /^NSF;?$/ ? undef : $ret;
+}
+
+=item WWW::TinySong->search( $SEARCH_TERMS [, $LIMIT ] )
+
+=cut
+
+sub search { shift->s(@_) }
+
+=item WWW::TinySong->s( $SEARCH_TERMS [, $LIMIT ] )
+
+Searches for the specified song and artist name terms, giving up to $LIMIT
+results.  $LIMIT defaults to 10 if not C<defined>.  Returns an array in list
+context or the top result in scalar context.  Return elements are hashrefs with
+keys C<qw(tinysongLink songID songName artistID artistName albumID albumName
+groovesharkLink)> as given by C<parse>.  Here's a quick script to demonstrate:
+
+  #!/usr/bin/perl
+
+  use WWW::TinySong;
+  use Data::Dumper;
+
+  print Dumper(WWW::TinySong->search("three little birds", 3));
+
+...and its output on my system at the time of this writing:
+
+  $VAR1 = {
+            'artistName' => 'Bob Marley',
+            'albumName' => 'Legend',
+            'songName' => 'Three Little Birds',
+            'artistID' => '139',
+            'tinysongLink' => 'http://tinysong.com/eg9',
+            'songID' => '1302',
+            'albumID' => '97291',
+            'groovesharkLink' => 'http://listen.grooveshark.com/song/Three_Little_Birds/1302'
+          };
+  $VAR2 = {
+            'artistName' => 'Bob Marley',
+            'albumName' => 'One Love: The Very Best Of Bob Marley & The Wailers',
+            'songName' => 'Three Little Birds',
+            'artistID' => '139',
+            'tinysongLink' => 'http://tinysong.com/lf2',
+            'songID' => '3928811',
+            'albumID' => '221021',
+            'groovesharkLink' => 'http://listen.grooveshark.com/song/Three_Little_Birds/3928811'
+          };
+  $VAR3 = {
+            'artistName' => 'Bob Marley & The Wailers',
+            'albumName' => 'Exodus',
+            'songName' => 'Three Little Birds',
+            'artistID' => '848',
+            'tinysongLink' => 'http://tinysong.com/egc',
+            'songID' => '3700',
+            'albumID' => '2397306',
+            'groovesharkLink' => 'http://listen.grooveshark.com/song/Three_Little_Birds/3700'
+          };
+
+=cut
+
+sub s {
+    my($pkg, $search_terms, $limit) = @_;
+
+    if(wantarray) {
+        $limit = 10 unless defined $limit;
+    }
+    else {
+        $limit = 1; # no point in searching for more if only one is needed
+    }
+    
+    my @ret = $pkg->parse($pkg->call('s', $search_terms,
+        {limit => $limit}));
+
+    return wantarray ? @ret : $ret[0];
+}
+
+=item WWW::TinySong->b( $SEARCH_TERMS )
+
+Searches for the specified song and artist name terms, giving the top result.
+I'm not really sure why this is part of the API because the same result can be
+obtained by limiting a C<search> to one result, but it's included here for
+completeness.
+
+=cut
+
+sub b {
+    my($pkg, $search_terms) = @_;
+    return ($pkg->parse($pkg->call('b', $search_terms)))[0];
+}
 
 =item tinysong( $QUERY_STRING [, $LIMIT ] )
 
 =item WWW::TinySong->tinysong( $QUERY_STRING [, $LIMIT ] )
 
-Searches tinysong.com for $QUERY_STRING, giving up to $LIMIT results.
-$LIMIT defaults to 10 if not C<defined>.  Returns an array in list context
-or the top result in scalar context.  Return elements are hashrefs with
-keys C<qw(album artist song url)>. Their values will be the empty string if
-not given by the website.  Here's a quick script to demonstrate:
-
-  #!/usr/bin/perl
-
-  use WWW::TinySong qw(tinysong);
-  use Data::Dumper;
-
-  print Dumper tinysong("a hard day's night", 3);
-
-...and its output on my system at the time of this writing:
-
-  $VAR1 = {
-            'album' => 'Beatles',
-            'artist' => 'Beatles',
-            'song' => 'Hard Day\'s Night',
-            'url' => 'http://tinysong.com/2gxh'
-          };
-  $VAR2 = {
-            'album' => '1',
-            'artist' => 'The Beatles',
-            'song' => 'A Hard Day\'s Night',
-            'url' => 'http://tinysong.com/2BI5'
-          };
-  $VAR3 = {
-            'album' => 'A Hard Day\'s Night',
-            'artist' => 'The Beatles',
-            'song' => 'And I Love Her',
-            'url' => 'http://tinysong.com/2i03'
-          };
+Deprecated legacy method that searches for $QUERY_STRING, giving
+up to $LIMIT results.  Currently just a wrapper for C<search> that does a bit
+of surgery to the results so that hashref keys are C<qw(album artist song
+url)>, like previous module versions.  The scraping implementation has been
+renamed to C<scrape> and uses the same hashref keys as the API.  This function
+will be removed in the next version.
 
 =cut
 
 sub tinysong {
     unshift @_, __PACKAGE__ # add the package name unless already there
         unless defined($_[0]) && UNIVERSAL::isa($_[0], __PACKAGE__);
+ 
+    my @ret;
+    if(wantarray) {
+    	@ret = shift->search(@_);
+    }
+	else {
+		@ret = (scalar shift->search(@_));
+	}
 
-    my($pkg, $string, $limit) = @_;
+    for my $res (@ret) {
+    	$res = {
+    	    album  => $res->{albumName},
+    	    artist => $res->{artistName},
+    	    song   => $res->{songName},
+    	    url    => $res->{tinysongLink},
+    	};
+    }
+
+    return wantarray ? @ret : $ret[0];
+}
+
+=item WWW::TinySong->call( $METHOD , $SEARCH_TERMS [, \%EXTRA_PARAMS ] )
+
+Calls API "method" $METHOD using the specified $SEARCH_TERMS and optional
+hashref of extra parameters.  Whitespace sequences in $SEARCH_TERMS will be
+converted to pluses.  Returns the entire response as a string.  Unless you're
+just grabbing a link, you will probably want to pass the result through
+C<parse>.
+
+=cut
+
+sub call {
+    my($pkg, $method, $search_terms, $param) = @_;
+    croak 'Empty method not allowed' unless length($method);
+
+    $search_terms =~ s/[\s\+]+/+/g;
+    $search_terms =~ s/^\+//;
+    $search_terms =~ s/\+$//;
+    croak 'Empty search terms not allowed' unless length($search_terms);
+    my $url = join('/', $pkg->service, CGI::escape($method), $search_terms);
+
+    $param ||= {};
+    $param = join('&', map
+        { sprintf('%s=%s', CGI::escape($_), CGI::escape($param->{$_})) }
+        keys %$param);
+    $url .= "?$param" if $param;
+
+    return $pkg->_get($url);
+}
+
+=item WWW::TinySong->parse( [ @RESULTS ] )
+
+Parses all the lines in the given list of results according to the specs,
+building and returning a (possibly empty) list of hashrefs with the keys
+C<qw(tinysongLink songID songName artistID artistName albumID albumName
+groovesharkLink)>, whose meanings are hopefully self-explanatory.
+
+=cut
+
+sub parse {
+    my $pkg = shift;
+    return map {
+        /^(http:\/\/.*); (\d*); (.*); (\d*); (.*); (\d*); (.*); (http:\/\/.*)$/
+            or croak 'Result in unexpected format';
+        {
+            tinysongLink    => $1,
+            songID          => $2,
+            songName        => $3,
+            artistID        => $4,
+            artistName      => $5,
+            albumID         => $6,
+            albumName       => $7,
+            groovesharkLink => $8,
+        }
+    } grep { !/^NSF;\s*$/ } map {chomp; split(/\n/, $_)} @_;
+}
+
+=item WWW::TinySong->scrape( $QUERY_STRING [, $LIMIT ] )
+
+Searches for $QUERY_STRING by scraping, giving up to $LIMIT results.  $LIMIT
+defaults to 10 if not C<defined>.  Returns an array in list context or the
+top result in scalar context.  Return elements are hashrefs with keys
+C<qw(albumName artistName songName tinysongLink)>.  Their values will be the
+empty string if not given by the website.  As an example, executing:
+
+  #!/usr/bin/perl
+
+  use WWW::TinySong;
+  use Data::Dumper;
+
+  print Dumper(WWW::TinySong->scrape("a hard day's night", 3));
+
+...prints something like:
+
+  $VAR1 = {
+            'artistName' => 'Beatles',
+            'tinysongLink' => 'http://tinysong.com/2gxh',
+            'songName' => 'Hard Day\'s Night',
+            'albumName' => 'Beatles'
+          };
+  $VAR2 = {
+            'artistName' => 'The Beatles',
+            'tinysongLink' => 'http://tinysong.com/2BI5',
+            'songName' => 'A Hard Day\'s Night',
+            'albumName' => '1'
+          };
+  $VAR3 = {
+            'artistName' => 'The Beatles',
+            'tinysongLink' => 'http://tinysong.com/2i03',
+            'songName' => 'And I Love Her',
+            'albumName' => 'A Hard Day\'s Night'
+          };
+
+This function is how the primary functionality of the module was implemented in
+the 0.0x series.  It remains here as a tribute to the past, but should be
+avoided because scraping depends on the details of the response HTML, which may
+change at any time (and in fact did at some point between versions 0.05 and
+0.06).  Interestingly, this function does currently have one advantage over the
+robust alternative: whereas C<search> is limited to a maximum of 32 results by
+the web service, scraping doesn't seem to be subjected to this requirement.
+
+=cut
+
+sub scrape {
+    my($pkg, $query_string, $limit) = @_;
     if(wantarray) {
         $limit = 10 unless defined $limit;
     }
@@ -123,7 +342,7 @@ sub tinysong {
     my $service = $pkg->service;
 
     my $response = $pkg->_get(sprintf('%s?s=%s&limit=%d', $service,
-        CGI::escape(lc($string)), $limit));
+        CGI::escape($query_string), $limit));
 
     my @ret           = ();
     my $inside_list   = 0;
@@ -132,7 +351,7 @@ sub tinysong {
     my $start_h = sub {
         my $tagname = lc(shift);
         my $attr    = shift;
-        if(    $tagname eq 'ul'
+        if(    $tagname eq 'ul' 
             && defined($attr->{id})
             && lc($attr->{id}) eq 'results')
         {
@@ -141,7 +360,8 @@ sub tinysong {
         elsif($inside_list) {
             if($tagname eq 'span') {
                 my $class = $attr->{class};
-                if(defined($class) && $class =~ /^(?:album|artist|song title)$/i) {
+                if(    defined($class)
+                    && $class =~ /^(?:album|artist|song title)$/i) {
                     $current_class = lc $class;
                     croak 'Unexpected results while parsing HTML'
                         if !@ret || defined($ret[$#ret]->{$current_class});
@@ -152,7 +372,7 @@ sub tinysong {
                 croak 'Bad song link' unless defined $href;
                 croak 'Song link doesn\'t seem to match service'
                     unless substr($href, 0, length($service)) eq $service;
-                push @ret, {url => $href};
+                push @ret, {tinysongLink => $href};
             }
         }
     };
@@ -182,29 +402,21 @@ sub tinysong {
         end_h           => [$end_h, 'tagname'],
         marked_sections => 1,
     );
-    $parser->parse($response->decoded_content || $response->content);
+    $parser->parse($response);
     $parser->eof;
 
     for my $res (@ret) {
-    	$res->{song} = $res->{'song title'};
-    	delete $res->{'song title'};
-        $res->{$_} ||= '' for qw(album artist song);
-        $res->{album}  =~ s/^\s+on\s//;
-        $res->{artist} =~ s/^\s+by\s//;
+    	$res = {
+    	    albumName    => $res->{album} || '',
+    	    artistName   => $res->{artist} || '',
+    	    songName     => $res->{'song title'} || '',
+    	    tinysongLink => $res->{tinysongLink} || '',
+    	};
+        $res->{albumName}  =~ s/^\s+on\s//;
+        $res->{artistName} =~ s/^\s+by\s//;
     }
 
     return wantarray ? @ret : $ret[0];
-}
-
-sub _get {
-    my($response, $pkg, $url) = (undef, @_);
-    for(0..$pkg->retries) {
-        $response = $pkg->ua->get($url);
-        last if $response->is_success;
-        croak $response->message || $response->status_line
-            if $response->is_error && $response->code != 500;
-    }
-    return $response;
 }
 
 =item WWW::TinySong->ua( [ $USER_AGENT ] )
@@ -261,6 +473,19 @@ sub retries {
 
 =cut
 
+################################################################################
+
+sub _get {
+    my($response, $pkg, $url) = (undef, @_);
+    for(0..$pkg->retries) {
+        $response = $pkg->ua->get($url);
+        last if $response->is_success;
+        croak $response->message || $response->status_line
+            if $response->is_error && $response->code != 500;
+    }
+    return $response->decoded_content || $response->content;
+}
+
 1;
 
 __END__
@@ -287,9 +512,11 @@ L<http://tinysong.com/>, L<LWP::UserAgent>, L<LWP::RobotUA>
 
 =head1 BUGS
 
-Please report them!  Submit a report at 
-L<http://rt.cpan.org/Public/Dist/Display.html?Name=WWW-TinySong>, create an
-issue at L<http://elementsofpuzzle.googlecode.com/>, or drop me an e-mail.
+Please report them!  The preferred way to submit a bug report for this module
+is through CPAN's bug tracker:
+L<http://rt.cpan.org/Public/Dist/Display.html?Name=WWW-TinySong>.  You may
+also create an issue at L<http://elementsofpuzzle.googlecode.com/> or drop
+me an e-mail.
 
 =head1 AUTHOR
 
@@ -297,7 +524,7 @@ Miorel-Lucian Palii, E<lt>mlpalii@gmail.comE<gt>
 
 =head1 VERSION
 
-Version 0.06  (June 22, 2009)
+Version 0.50  (June 22, 2009)
 
 The latest version is hosted on Google Code as part of
 L<http://elementsofpuzzle.googlecode.com/>.  Significant changes are also

@@ -1,4 +1,4 @@
-use Test::More tests => 10;
+use Test::More tests => 18;
 BEGIN { use_ok('WWW::TinySong') };
 
 my $ua;
@@ -18,21 +18,42 @@ is(WWW::TinySong->retries($retries), $retries, 'retries() sets correctly');
 SKIP: {
     my $conn_ok;
     eval 'use Net::Config qw(%NetConfig); $conn_ok = $NetConfig{test_hosts}';
-    skip 'Net::Config needed for network-related tests', 4 if $@;
-    skip 'No network connection', 4 unless $conn_ok;
+    skip 'Net::Config needed for network-related tests', 12 if $@;
+    skip 'No network connection', 12 unless $conn_ok;
 
-    my @res;
+    my($res, @res);
 
-    # basic check
+    # tinysong() check
     ok(@res = WWW::TinySong->tinysong('we are the champions'),
         'tinysong() returns true value');
     like(join('', map {$_->{artist}} @res), qr/queen/i,
         'tinysong() gives expected results');
 
-    # imported check
-    WWW::TinySong->import('tinysong');
-    ok(@res = tinysong('a hard day\'s night'),
-        'imported tinysong() returns true value');
-    like(join('', map {$_->{artist}} @res), qr/beatles/i,
-        'imported tinysong() gives expected results');    
+    # link() check
+    ok($res = WWW::TinySong->link('dreams'), 'link() returns true value');
+
+    # a() check
+    ok($res = WWW::TinySong->a('come go with me'), 'a() returns true value');
+    
+    # b() check
+    ok($res = WWW::TinySong->b('feel good inc'), 'b() returns true value');
+    like($res->{artistName}, qr/gorillaz/i, 'b() gives expected results');
+    
+    # search() check
+    ok(@res = WWW::TinySong->search('three little birds'),
+        'search() returns true value');
+    like(join('', map {$_->{artistName}} @res), qr/bob marley/i,
+        'search() gives expected results');
+    
+    # s() check
+    ok(@res = WWW::TinySong->s('stairway to heaven'),
+        's() returns true value');
+    like(join('', map {$_->{artistName}} @res), qr/led zeppelin/i,
+        's() gives expected results');
+
+    # scrape() check
+    ok(@res = WWW::TinySong->scrape('a hard day\'s night'),
+        'scrape() returns true value');
+    like(join('', map {$_->{artistName}} @res), qr/beatles/i,
+        'scrape() gives expected results');
 }

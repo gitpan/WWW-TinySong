@@ -2,9 +2,10 @@ Changes                                  Module change log
 MANIFEST                                 This file
 META.yml                                 Module meta-data
 Makefile.PL                              Generate Makefile
-README                                   Read this file
+README                                   Useful information
+examples/birds.pl                        Example of search() return format
 examples/champions.pl                    Example from module SYNOPSIS
-examples/hard_day.pl                     Example showing return format
+examples/hard_day.pl                     Example of scrape() return format
 lib/WWW/TinySong.pm                      Source for WWW::TinySong
 t/WWW-TinySong.t                         Test WWW::TinySong
 t/pod-coverage.t                         Test POD coverage
