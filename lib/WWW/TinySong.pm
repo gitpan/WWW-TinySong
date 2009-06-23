@@ -4,20 +4,6 @@ package WWW::TinySong;
 
 WWW::TinySong - Get free music links from tinysong.com
 
-=head1 WARNING
-
-This version of the module is only provided to serve as a transitional step
-between the 0.0x series (which worked by scraping because it was born before
-Tinysong had released an API) and the 1.0+ series, which will break backward
-compatibility by exclusively using field and method names parallel to the
-official documentation at L<http://apidocs.tinysong.com/>.
-
-If you are just getting started with this module, please look for a newer
-version instead, so that you aren't tempted to use deprecated functions.  If
-you already have code depending on the older interface, this version should
-work as a transparent drop-in replacement, but please consider updating: it
-should be a fairly straightforward refactoring.
-
 =head1 SYNOPSIS
 
   # basic use
@@ -56,6 +42,11 @@ URL, allowing you to listen to the song for free online and share it with
 friends.  L<WWW::TinySong> is a Perl interface to this service, allowing you
 to programmatically search its underlying database.
 
+=head1 NOTICE
+
+This version integrates the official API and breaks backward compatibility
+with pre-API module versions that worked exclusively by scraping.
+
 =cut
 
 use 5.006;
@@ -64,12 +55,10 @@ use warnings;
 
 use Carp;
 use CGI;
-use Exporter;
 use HTML::Parser;
 
-our @EXPORT_OK = qw(tinysong);
-our @ISA       = qw(Exporter);
-our $VERSION   = '0.50';
+our @ISA       = ();
+our $VERSION   = '1.00';
 
 my($ua, $service, $retries);
 
@@ -78,8 +67,7 @@ my($ua, $service, $retries);
 The do-it-all function is C<search>.  If you just want a tiny URL, use C<link>.
 C<call> and C<parse> are provided so that you can (hopefully) continue to use
 this module if the tinysong.com API is extended and I'm too lazy or busy to
-update, but you will probably not need to use them otherwise.  C<tinysong> is
-included for backward compatibility but is deprecated.  The other public
+update, but you will probably not need to use them otherwise.  The other public
 functions are either aliases for one of the above or created to allow the
 customization of requests issued by this module. 
 
@@ -189,43 +177,6 @@ completeness.
 sub b {
     my($pkg, $search_terms) = @_;
     return ($pkg->parse($pkg->call('b', $search_terms)))[0];
-}
-
-=item tinysong( $QUERY_STRING [, $LIMIT ] )
-
-=item WWW::TinySong->tinysong( $QUERY_STRING [, $LIMIT ] )
-
-Deprecated legacy method that searches for $QUERY_STRING, giving
-up to $LIMIT results.  Currently just a wrapper for C<search> that does a bit
-of surgery to the results so that hashref keys are C<qw(album artist song
-url)>, like previous module versions.  The scraping implementation has been
-renamed to C<scrape> and uses the same hashref keys as the API.  This function
-will be removed in the next version.
-
-=cut
-
-sub tinysong {
-    unshift @_, __PACKAGE__ # add the package name unless already there
-        unless defined($_[0]) && UNIVERSAL::isa($_[0], __PACKAGE__);
- 
-    my @ret;
-    if(wantarray) {
-    	@ret = shift->search(@_);
-    }
-	else {
-		@ret = (scalar shift->search(@_));
-	}
-
-    for my $res (@ret) {
-    	$res = {
-    	    album  => $res->{albumName},
-    	    artist => $res->{artistName},
-    	    song   => $res->{songName},
-    	    url    => $res->{tinysongLink},
-    	};
-    }
-
-    return wantarray ? @ret : $ret[0];
 }
 
 =item WWW::TinySong->call( $METHOD , $SEARCH_TERMS [, \%EXTRA_PARAMS ] )
@@ -524,7 +475,7 @@ Miorel-Lucian Palii, E<lt>mlpalii@gmail.comE<gt>
 
 =head1 VERSION
 
-Version 0.50  (June 22, 2009)
+Version 1.00  (June 22, 2009)
 
 The latest version is hosted on Google Code as part of
 L<http://elementsofpuzzle.googlecode.com/>.  Significant changes are also

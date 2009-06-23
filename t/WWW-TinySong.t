@@ -1,4 +1,4 @@
-use Test::More tests => 18;
+use Test::More tests => 16;
 BEGIN { use_ok('WWW::TinySong') };
 
 my $ua;
@@ -18,16 +18,10 @@ is(WWW::TinySong->retries($retries), $retries, 'retries() sets correctly');
 SKIP: {
     my $conn_ok;
     eval 'use Net::Config qw(%NetConfig); $conn_ok = $NetConfig{test_hosts}';
-    skip 'Net::Config needed for network-related tests', 12 if $@;
-    skip 'No network connection', 12 unless $conn_ok;
+    skip 'Net::Config needed for network-related tests', 10 if $@;
+    skip 'No network connection', 10 unless $conn_ok;
 
     my($res, @res);
-
-    # tinysong() check
-    ok(@res = WWW::TinySong->tinysong('we are the champions'),
-        'tinysong() returns true value');
-    like(join('', map {$_->{artist}} @res), qr/queen/i,
-        'tinysong() gives expected results');
 
     # link() check
     ok($res = WWW::TinySong->link('dreams'), 'link() returns true value');

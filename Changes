@@ -3,12 +3,12 @@ Revision history for WWW::TinySong
 
 June 22, 2009
 -------------
- * added retries() to combat read timeouts (and possibly other internal server
-   errors)
+ * added retries() to combat read timeouts (and possibly other server errors)
  * tests are slightly better now
  * released version 0.06
  * integrated the new API
  * released transitional version 0.50
+ * released version 1.00 which breaks backward compatibility
 
 June 21, 2009
 -------------
