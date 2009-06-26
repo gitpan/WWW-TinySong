@@ -8,9 +8,9 @@ WWW::TinySong - Get free music links from tinysong.com
 
   # basic use
 
-  use WWW::TinySong;
+  use WWW::TinySong qw(search);
 
-  for(WWW::TinySong->search("we are the champions")) {
+  for(search("we are the champions")) {
       printf("%s", $_->{songName});
       printf(" by %s", $_->{artistName});
       printf(" on %s", $_->{albumName}) if $_->{albumName};
@@ -42,11 +42,6 @@ URL, allowing you to listen to the song for free online and share it with
 friends.  L<WWW::TinySong> is a Perl interface to this service, allowing you
 to programmatically search its underlying database.
 
-=head1 NOTICE
-
-This version integrates the official API and breaks backward compatibility
-with pre-API module versions that worked exclusively by scraping.
-
 =cut
 
 use 5.006;
@@ -54,17 +49,20 @@ use strict;
 use warnings;
 
 use Carp;
+use Exporter;
 use CGI;
 use HTML::Parser;
 
-our @ISA       = ();
-our $VERSION   = '1.00';
+our @EXPORT_OK = qw(link search);
+our @ISA       = qw(Exporter);
+our $VERSION   = '1.01';
 
 my($ua, $service, $retries);
 
 =head1 FUNCTIONS
 
 The do-it-all function is C<search>.  If you just want a tiny URL, use C<link>.
+These two functions may be C<import>ed and used like any other function. 
 C<call> and C<parse> are provided so that you can (hopefully) continue to use
 this module if the tinysong.com API is extended and I'm too lazy or busy to
 update, but you will probably not need to use them otherwise.  The other public
@@ -73,11 +71,17 @@ customization of requests issued by this module.
 
 =over 4
 
+=item link( $SEARCH_TERMS )
+
 =item WWW::TinySong->link( $SEARCH_TERMS )
 
 =cut
 
-sub link { shift->a(@_) }
+sub link {
+    unshift @_, __PACKAGE__ # add the package name unless already there
+        unless defined($_[0]) && UNIVERSAL::isa($_[0], __PACKAGE__);
+    return shift->a(@_);
+}
 
 =item WWW::TinySong->a( $SEARCH_TERMS )
 
@@ -93,11 +97,17 @@ sub a {
     return $ret =~ /^NSF;?$/ ? undef : $ret;
 }
 
+=item search( $SEARCH_TERMS [, $LIMIT ] )
+
 =item WWW::TinySong->search( $SEARCH_TERMS [, $LIMIT ] )
 
 =cut
 
-sub search { shift->s(@_) }
+sub search {
+    unshift @_, __PACKAGE__ # add the package name unless already there
+        unless defined($_[0]) && UNIVERSAL::isa($_[0], __PACKAGE__);
+    return shift->s(@_);
+}
 
 =item WWW::TinySong->s( $SEARCH_TERMS [, $LIMIT ] )
 
@@ -109,10 +119,10 @@ groovesharkLink)> as given by C<parse>.  Here's a quick script to demonstrate:
 
   #!/usr/bin/perl
 
-  use WWW::TinySong;
+  use WWW::TinySong qw(search);
   use Data::Dumper;
 
-  print Dumper(WWW::TinySong->search("three little birds", 3));
+  print Dumper search("three little birds", 3);
 
 ...and its output on my system at the time of this writing:
 
@@ -244,31 +254,31 @@ C<qw(albumName artistName songName tinysongLink)>.  Their values will be the
 empty string if not given by the website.  As an example, executing:
 
   #!/usr/bin/perl
-
+  
   use WWW::TinySong;
   use Data::Dumper;
-
-  print Dumper(WWW::TinySong->scrape("a hard day's night", 3));
+  
+  print Dumper(WWW::TinySong->scrape("we can work it out", 3));
 
 ...prints something like:
 
   $VAR1 = {
-            'artistName' => 'Beatles',
-            'tinysongLink' => 'http://tinysong.com/2gxh',
-            'songName' => 'Hard Day\'s Night',
-            'albumName' => 'Beatles'
+            'artistName' => 'The Beatles',
+            'tinysongLink' => 'http://tinysong.com/5Ym',
+            'songName' => 'We Can Work It Out',
+            'albumName' => 'The Beatles 1'
           };
   $VAR2 = {
             'artistName' => 'The Beatles',
-            'tinysongLink' => 'http://tinysong.com/2BI5',
-            'songName' => 'A Hard Day\'s Night',
-            'albumName' => '1'
+            'tinysongLink' => 'http://tinysong.com/uLd',
+            'songName' => 'We Can Work It Out',
+            'albumName' => 'We Can Work It Out / Day Tripper'
           };
   $VAR3 = {
             'artistName' => 'The Beatles',
-            'tinysongLink' => 'http://tinysong.com/2i03',
-            'songName' => 'And I Love Her',
-            'albumName' => 'A Hard Day\'s Night'
+            'tinysongLink' => 'http://tinysong.com/2EaX',
+            'songName' => 'We Can Work It Out',
+            'albumName' => 'The Beatles 1967-70'
           };
 
 This function is how the primary functionality of the module was implemented in
@@ -448,14 +458,14 @@ a large number of requests, don't make them too frequently.  There are
 several CPAN modules that can help you make sure your code is nice.  Try,
 for example, L<LWP::RobotUA> as the user agent:
 
-  use WWW::TinySong qw(tinysong);
+  use WWW::TinySong qw(search link);
   use LWP::RobotUA;
 
   my $ua = LWP::RobotUA->new('my-nice-robot/0.1', 'me@example.org');
 
   WWW::TinySong->ua($ua);
 
-  # tinysong() should now be well-behaved
+  # search() and link() should now be well-behaved
 
 =head1 SEE ALSO
 
@@ -475,7 +485,7 @@ Miorel-Lucian Palii, E<lt>mlpalii@gmail.comE<gt>
 
 =head1 VERSION
 
-Version 1.00  (June 22, 2009)
+Version 1.01  (June 26, 2009)
 
 The latest version is hosted on Google Code as part of
 L<http://elementsofpuzzle.googlecode.com/>.  Significant changes are also

@@ -1,13 +1,10 @@
-WWW::TinySong version 1.00
+WWW::TinySong version 1.01
 ==========================
 
 tinysong.com is a web app that can be queried for a song and returns a tiny
 URL, allowing you to listen to the song for free online and share it with
 friends.  WWW::TinySong is a Perl interface to this service, allowing you
-to programmatically search its underlying database.
-
-This version integrates the official API and breaks backward compatibility
-with pre-API module versions that worked exclusively by scraping.
+to programmatically search its underlying database..
 
 INSTALLATION
 
@@ -36,8 +33,8 @@ DEPENDENCIES
 This module requires the following other modules:
 
   Carp
-  CGI
   Exporter
+  CGI
   HTML::Parser
   LWP::UserAgent
 

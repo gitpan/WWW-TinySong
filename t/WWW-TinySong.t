@@ -24,30 +24,44 @@ SKIP: {
     my($res, @res);
 
     # link() check
-    ok($res = WWW::TinySong->link('dreams'), 'link() returns true value');
+    $res = WWW::TinySong->link('dreams');
+    diag("link() returned $res");
+    ok($res, 'link() returns true value');
 
     # a() check
-    ok($res = WWW::TinySong->a('come go with me'), 'a() returns true value');
+    $res = WWW::TinySong->link('around the world');
+    diag("a() returned $res");
+    ok($res, 'a() returns true value');
     
     # b() check
     ok($res = WWW::TinySong->b('feel good inc'), 'b() returns true value');
-    like($res->{artistName}, qr/gorillaz/i, 'b() gives expected results');
+    $res = get_artists($res);
+    diag("b() returned artists: $res");
+    like($res, qr/gorillaz/i, 'b() gives expected results');
     
     # search() check
     ok(@res = WWW::TinySong->search('three little birds'),
         'search() returns true value');
-    like(join('', map {$_->{artistName}} @res), qr/bob marley/i,
-        'search() gives expected results');
-    
+    $res = get_artists(@res);
+    diag("search() returned artists: $res");
+    like($res, qr/bob marley/i, 'search() gives expected results');
+
     # s() check
     ok(@res = WWW::TinySong->s('stairway to heaven'),
         's() returns true value');
-    like(join('', map {$_->{artistName}} @res), qr/led zeppelin/i,
-        's() gives expected results');
+    $res = get_artists(@res);
+    diag("s() returned artists: $res");
+    like($res, qr/led zeppelin/i, 's() gives expected results');
 
     # scrape() check
-    ok(@res = WWW::TinySong->scrape('a hard day\'s night'),
+    ok(@res = WWW::TinySong->scrape('we can work it out'),
         'scrape() returns true value');
-    like(join('', map {$_->{artistName}} @res), qr/beatles/i,
-        'scrape() gives expected results');
+    $res = get_artists(@res);
+    diag("scrape() returned artists: $res");
+    like($res, qr/beatles/i, 'scrape() gives expected results');
+}
+
+sub get_artists {
+    local %_ = map {$_->{artistName} => 1} @_;
+    return join('; ', sort keys %_);
 }

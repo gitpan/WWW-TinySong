@@ -1,8 +1,8 @@
 #!/usr/bin/perl
 
-use WWW::TinySong;
+use WWW::TinySong qw(search);
 
-for(WWW::TinySong->search("we are the champions")) {
+for(search("we are the champions")) {
     printf("%s", $_->{songName});
     printf(" by %s", $_->{artistName});
     printf(" on %s", $_->{albumName}) if $_->{albumName};

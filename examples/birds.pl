@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 
-use WWW::TinySong;
+use WWW::TinySong qw(search);
 use Data::Dumper;
 
-print Dumper(WWW::TinySong->search("three little birds", 3));
+print Dumper search("three little birds", 3);

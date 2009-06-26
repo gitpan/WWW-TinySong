@@ -1,6 +1,13 @@
 Revision history for WWW::TinySong
 ==================================
 
+June 26, 2009
+-------------
+ * search() and link() importable now
+ * increased verbosity of tests
+ * improved documentation
+ * released version 1.01
+
 June 22, 2009
 -------------
  * added retries() to combat read timeouts (and possibly other server errors)
